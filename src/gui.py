@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from tkinter import ttk, messagebox, simpledialog
 from tkcalendar import DateEntry  # 添加日历控件导入
 from typing import List, Dict, Optional
@@ -9,19 +9,17 @@ from dialogs import TaskDialog
 from project_manager import ProjectManager
 
 
-# UI配置常量
+# UI配置常量 - 更新列配置
 UI_CONFIG = {
     'PADDING': 10,
     'BUTTON_PADDING': (10, 5),
     'TREEVIEW_HEIGHT': 15,
     'COLUMN_WIDTHS': {
-        'project_number': 100,
-        'title': 200, 
-        'progress': 80,
-        'status': 80,
+        'title': 150,
+        'project': 100,
         'priority': 80,
-        'start_date': 100,
-        'due_date': 100
+        'completed': 80,
+        'due_date': 120
     }
 }
 
@@ -46,7 +44,6 @@ class ProjectManagerGUI:
 
         # 保存各个视图的框架引用
         self.views = {}
-
         self.setup_ui()
         self.refresh_task_list()
         self.refresh_weekly_tasks()
@@ -150,11 +147,30 @@ class ProjectManagerGUI:
         elif view_name == "project":
           self.select_button(self.project_btn)
           
+    def get_week_date_range(self, week_number):
+        """获取指定周数的周一至周日日期范围"""
+        current_year = datetime.now().year
+        # 获取该年的1月1日
+        jan_first = datetime(current_year, 1, 1)
+        # 计算1月1日是周几（周一为0，周日为6）
+        first_weekday = jan_first.weekday()
+        # 计算第一周的周一日期
+        if first_weekday <= 3:
+            first_monday = jan_first - timedelta(days=first_weekday)
+        else:
+            first_monday = jan_first + timedelta(days=(7 - first_weekday))
+        
+        # 计算指定周的周一日期
+        target_monday = first_monday + timedelta(weeks=week_number - 1)
+        target_sunday = target_monday + timedelta(days=6)
+        
+        return target_monday.strftime("%m/%d"), target_sunday.strftime("%m/%d")
+
     def setup_weekly_tasks_ui(self, parent):
         """设置每周待办事项界面"""
-        # 标题
-        title_label = ttk.Label(parent, text="本周待办事项", style='Title.TLabel')
-        title_label.pack(pady=(0, 15))
+        # # 标题
+        # title_label = ttk.Label(parent, text="本周待办事项", style='Title.TLabel')
+        # title_label.pack(pady=(0, 15))
 
         # 周选择器
         week_frame = ttk.Frame(parent)
@@ -164,11 +180,18 @@ class ProjectManagerGUI:
 
         # 获取当前周数
         current_week = datetime.now().isocalendar()[1]
-        week_options = [f"第{i}周" for i in range(1, 53)]
+        # 生成周选项，显示周一至周日日期范围
+        week_options = []
+        for i in range(1, 53):
+            monday, sunday = self.get_week_date_range(i)
+            week_options.append(f"第{i}周 ({monday}-{sunday})")
 
-        self.week_var = tk.StringVar(value=f"第{current_week}周")
+        # 设置当前周的显示
+        current_monday, current_sunday = self.get_week_date_range(current_week)
+        self.week_var = tk.StringVar(value=f"第{current_week}周 ({current_monday}-{current_sunday})")
+        
         week_combo = ttk.Combobox(
-            week_frame, textvariable=self.week_var, values=week_options, width=10)
+            week_frame, textvariable=self.week_var, values=week_options, width=20)  # 增加宽度以显示日期
         week_combo.pack(side=tk.LEFT)
         week_combo.bind("<<ComboboxSelected>>", self.refresh_weekly_tasks)
 
@@ -177,21 +200,32 @@ class ProjectManagerGUI:
         weekly_frame.pack(fill=tk.BOTH, expand=True)
 
         # 创建树状视图显示每周任务
-        weekly_columns = ("title", "priority", "status", "progress")
+        weekly_columns = ("title", "project", "priority", "completed", "due_date")
         self.weekly_tree = ttk.Treeview(
             weekly_frame, columns=weekly_columns, show="headings", height=15)
-
+        
         # 设置列标题
         self.weekly_tree.heading("title", text="任务名称")
-        self.weekly_tree.heading("priority", text="优先级")
-        self.weekly_tree.heading("status", text="状态")
-        self.weekly_tree.heading("progress", text="进度")
-
+        self.weekly_tree.heading("project", text="所属项目")
+        self.weekly_tree.heading("priority", text="紧急程度")
+        self.weekly_tree.heading("completed", text="是否完成")
+        self.weekly_tree.heading("due_date", text="预期完成时间")
+        
         # 设置列宽度
         self.weekly_tree.column("title", width=150, anchor='center')
+        self.weekly_tree.column("project", width=100, anchor='center')
         self.weekly_tree.column("priority", width=80, anchor='center')
-        self.weekly_tree.column("status", width=80, anchor='center')
-        self.weekly_tree.column("progress", width=80, anchor='center')
+        self.weekly_tree.column("completed", width=80, anchor='center')
+        self.weekly_tree.column("due_date", width=120, anchor='center')
+        
+        # 删除以下重复的旧列配置代码（第234-244行）
+        # self.weekly_tree.heading("priority", text="优先级")
+        # self.weekly_tree.heading("status", text="状态")
+        # self.weekly_tree.heading("progress", text="进度")
+        # self.weekly_tree.column("title", width=150, anchor='center')
+        # self.weekly_tree.column("priority", width=80, anchor='center')
+        # self.weekly_tree.column("status", width=80, anchor='center')
+        # self.weekly_tree.column("progress", width=80, anchor='center')
 
         # 滚动条
         weekly_scrollbar = ttk.Scrollbar(
@@ -257,7 +291,7 @@ class ProjectManagerGUI:
 
         # 设置列标题
         self.tree.heading("project_number", text="项目编号")
-        self.tree.heading("title", text="任务名称")
+        self.tree.heading("title", text="项目名称")
         self.tree.heading("progress", text="进度")
         self.tree.heading("status", text="状态")
         self.tree.heading("priority", text="优先级")
@@ -303,9 +337,10 @@ class ProjectManagerGUI:
         for item in self.weekly_tree.get_children():
             self.weekly_tree.delete(item)
 
-        selected_week = int(
-            self.week_var.get().replace("第", "").replace("周", ""))
-
+        # 从新的格式中提取周数
+        selected_week_str = self.week_var.get()
+        selected_week = int(selected_week_str.split("第")[1].split("周")[0])
+        
         tasks = self.manager.get_all_tasks()
         weekly_tasks = []
         total_progress = 0
@@ -323,10 +358,15 @@ class ProjectManagerGUI:
 
         # 批量添加任务到每周列表
         for task in weekly_tasks:
+            completed_status = "是" if task.status == "已完成" else "否"
             self.weekly_tree.insert("", "end", values=(
-                task.title, task.priority, task.status, f"{task.progress}%"
+                task.title, 
+                task.project_number or "无", 
+                task.priority, 
+                completed_status,
+                task.due_date or "无"
             ))
-
+        
         # 更新统计信息
         total_tasks = len(weekly_tasks)
         completed_tasks = sum(1 for t in weekly_tasks if t.status == "已完成")
@@ -460,7 +500,7 @@ class ProjectManagerGUI:
         if task:
             progress = simpledialog.askinteger("更新进度",
                                                f"请输入 {task.title} 的进度 (0-100):",
-                                               min_value=0, max_value=100,
+                                               minvalue=0, maxvalue=100,
                                                initialvalue=task.progress)
             if progress is not None:
                 self.manager.update_task_progress(task_index, progress)
