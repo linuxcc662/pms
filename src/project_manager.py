@@ -1,109 +1,105 @@
 import json
 import os
-from typing import List, Optional
-from datetime import datetime
+from typing import List, Optional, Dict, Any
+from pathlib import Path
 from task import Task
-from builtins import int
+import logging
 
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class ProjectManager:
-    """
-    项目管理器，负责任务的增删改查和持久化
-
-    Attributes:
-        data_file (str): 数据文件路径
-        tasks (List[Task]): 任务列表
-    """
-
+    """项目管理器，专门负责项目的增删改查和持久化"""
+    
     def __init__(self, data_file: str = "project_data.json"):
-        """
-        初始化项目管理器
-
-        Args:
-            data_file: 数据文件路径，默认为project_data.json
-        """
-        self.data_file = data_file
-        self.tasks: List[Task] = []
-        self.load_tasks()
-
-    def add_task(self, title: str, description: str = "", priority: int = 1,
-                 due_date: Optional[str] = None, start_date: Optional[str] = None,
-                 project_number: Optional[str] = None) -> Task:
-        """添加新任务"""
-        task = Task(title, description, priority,
-                    due_date, start_date, project_number)
-        self.tasks.append(task)
-        self.save_tasks()
-        return task
-
-    def remove_task(self, task_index: int) -> bool:
-        """删除指定索引的任务"""
-        if 0 <= task_index < len(self.tasks):
-            del self.tasks[task_index]
-            self.save_tasks()
-            return True
-        return False
-
-    def update_task_progress(self, task_index: int, progress: int) -> bool:
-        """更新指定任务的进度"""
-        if 0 <= task_index < len(self.tasks):
-            self.tasks[task_index].update_progress(progress)
-            self.save_tasks()
-            return True
-        return False
-
-    def get_task(self, task_index: int) -> Optional[Task]:
-        """获取指定索引的任务"""
-        if 0 <= task_index < len(self.tasks):
-            return self.tasks[task_index]
-        return None
-
-    def get_all_tasks(self) -> List[Task]:
-        """获取所有任务"""
-        return self.tasks.copy()  # 返回副本避免外部修改
-
-    def get_tasks_by_status(self, status: str) -> List[Task]:
-        """按状态筛选任务"""
-        return [task for task in self.tasks if task.status == status]
-
-    def get_tasks_by_priority(self, priority: int) -> List[Task]:
-        """按优先级筛选任务"""
-        return [task for task in self.tasks if task.priority == priority]
-
-    def get_tasks_by_project_number(self, project_number: str) -> List[Task]:
-        """按项目编号筛选任务"""
-        return [task for task in self.tasks if task.project_number == project_number]
-
-    def save_tasks(self) -> None:
-        """保存任务到文件"""
+        """初始化项目管理器"""
+        self.data_file = Path(data_file)
+        self.projects: List[Task] = []
+        self.load_data()
+    
+    def load_data(self) -> None:
+        """从文件加载项目数据"""
+        if not self.data_file.exists():
+            logger.info("项目数据文件不存在，创建空列表")
+            self.projects = []
+            return
+        
         try:
-            data = [task.to_dict() for task in self.tasks]
+            with open(self.data_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.projects = [Task.from_dict(item) for item in data]
+            logger.info(f"成功加载 {len(self.projects)} 个项目")
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error(f"加载项目信息失败: {e}")
+            self.projects = []
+        except Exception as e:
+            logger.error(f"加载数据时发生未知错误: {e}")
+            self.projects = []
+    
+    def save_data(self) -> bool:
+        """保存项目数据到文件"""
+        try:
+            # 确保目录存在
+            self.data_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            project_data = [task.to_dict() for task in self.projects]
             with open(self.data_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                json.dump(project_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"成功保存 {len(self.projects)} 个项目")
+            return True
         except (IOError, PermissionError) as e:
-            print(f"保存任务失败: {e}")
-
-    def load_tasks(self) -> None:
-        """从文件加载任务"""
-        if os.path.exists(self.data_file):
-            try:
-                with open(self.data_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self.tasks = [Task.from_dict(item) for item in data]
-            except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-                print(f"加载任务失败: {e}")
-                self.tasks = []
+            logger.error(f"保存项目信息失败: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"保存数据时发生未知错误: {e}")
+            return False
+    
+    def add_project(self, title: str, description: str = "", priority: int = 1,
+                   due_date: Optional[str] = None, start_date: Optional[str] = None,
+                   project_number: Optional[str] = None) -> Optional[Task]:
+        """添加新项目"""
+        try:
+            # 修复参数顺序：使用关键字参数确保正确映射
+            task = Task(
+                title=title,
+                description=description,
+                priority=priority,
+                due_date=due_date,
+                start_date=start_date,
+                project_number=project_number
+            )
+            
+            self.projects.append(task)
+            if self.save_data():
+                return task
+            return None
+        except Exception as e:
+            logger.error(f"添加项目失败: {e}")
+            return None
+    
+    def get_all_projects(self) -> List[Task]:
+        """获取所有项目"""
+        return self.projects.copy()
+    
+    def get_project_by_number(self, project_number: str) -> Optional[Task]:
+        """根据项目编号获取项目"""
+        return next((p for p in self.projects if p.project_number == project_number), None)
+    
+    def delete_project(self, project_number: str) -> bool:
+        """删除项目"""
+        initial_count = len(self.projects)
+        
+        # 添加调试信息
+        logger.info(f"尝试删除项目编号: {project_number}")
+        logger.info(f"当前项目列表中的编号: {[p.project_number for p in self.projects]}")
+        
+        self.projects = [p for p in self.projects if p.project_number != project_number]
+        
+        if len(self.projects) < initial_count:
+            logger.info(f"成功找到并删除项目，开始保存数据")
+            return self.save_data()
         else:
-            self.tasks = []
-
-    def __len__(self) -> int:
-        """返回任务数量"""
-        return len(self.tasks)
-
-    def __getitem__(self, index: int) -> Task:
-        """支持索引访问"""
-        return self.tasks[index]
-
-    def __iter__(self):
-        """支持迭代"""
-        return iter(self.tasks)
+            logger.warning(f"未找到项目编号为 {project_number} 的项目")
+            return False

@@ -121,9 +121,19 @@ class TaskDialog:
         ttk.Label(parent, text=label_text).grid(row=row, column=0, sticky=tk.W, pady=5)
         var = tk.StringVar(value=default_value)
         setattr(self, f"{var_name}_var", var)
+        
+        # 导入datetime用于日期限制
+        from datetime import datetime
+        
+        # 如果是开始日期，限制只能选择当前日期之前
+        max_date = None
+        if label_text == "开始日期:":
+            max_date = datetime.now()
+        
         date_entry = DateEntry(parent, textvariable=var, 
                              width=UI_CONFIG['date_entry_width'],
-                             date_pattern='yyyy-mm-dd', locale='zh_CN')
+                             date_pattern='yyyy-mm-dd', locale='zh_CN',
+                             maxdate=max_date)  # 添加最大日期限制
         date_entry.grid(row=row, column=1, sticky=tk.W, pady=5, padx=5)
         
         # 添加焦点绑定以减少闪烁
@@ -183,5 +193,146 @@ class TaskDialog:
         self.dialog.destroy()
 
     def on_cancel(self) -> None:
+        """取消按钮点击事件"""
+        self.dialog.destroy()
+
+
+class WeeklyTaskDialog:
+    """每周任务对话框类，用于创建和编辑每周待办事项"""
+
+    def __init__(self, parent, title, task=None):
+        """
+        初始化每周任务对话框
+        
+        Args:
+            parent: 父窗口
+            title: 对话框标题
+            task: 可选的任务对象，用于编辑模式
+        """
+        self.result = None
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.title(title)
+        self.dialog.geometry("400x300")
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+
+        # 居中显示
+        self.center_dialog(parent)
+        self.create_widgets(task)
+        self.dialog.wait_window()
+
+    def center_dialog(self, parent):
+        """将对话框居中显示在父窗口中心"""
+        self.dialog.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - self.dialog.winfo_width()) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - self.dialog.winfo_height()) // 2
+        self.dialog.geometry(f"+{x}+{y}")
+
+    def create_widgets(self, task=None):
+        """创建对话框中的所有控件"""
+        frame = ttk.Frame(self.dialog, padding="10")
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # 任务名称
+        ttk.Label(frame, text="任务名称:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.title_var = tk.StringVar(value=task.title if task else "")
+        title_entry = ttk.Entry(frame, textvariable=self.title_var, width=30)
+        title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
+
+        # 所属项目 - 修改为从项目名称筛选
+        ttk.Label(frame, text="所属项目:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.project_var = tk.StringVar()
+        
+        # 获取所有项目名称（从任务标题中提取）
+        from project_manager import ProjectManager
+        manager = ProjectManager()
+        tasks = manager.get_all_tasks()
+        
+        # 提取项目名称：假设项目名称是任务标题中特定的格式
+        # 这里可以根据实际需求调整项目名称的提取逻辑
+        project_names = sorted(set(task.title for task in tasks if task.title))
+        project_options = ["无"] + project_names
+        
+        project_combo = ttk.Combobox(frame, textvariable=self.project_var, 
+                                   values=project_options, width=27)
+        project_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=5)
+        
+        # 设置默认值（编辑模式）
+        if task:
+            self.project_var.set(task.project_number or "无")
+        else:
+            self.project_var.set("无")
+
+        # 紧急程度
+        ttk.Label(frame, text="紧急程度:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.priority_var = tk.StringVar()
+        priority_combo = ttk.Combobox(frame, textvariable=self.priority_var, 
+                                    values=["一般", "重要", "核心"], width=27)
+        priority_combo.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
+        
+        # 设置默认值（编辑模式）
+        if task:
+            priority_map = {1: "一般", 2: "重要", 3: "核心"}
+            self.priority_var.set(priority_map.get(task.priority, "一般"))
+        else:
+            self.priority_var.set("一般")
+
+        # 是否完成
+        ttk.Label(frame, text="是否完成:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.completed_var = tk.StringVar()
+        completed_combo = ttk.Combobox(frame, textvariable=self.completed_var, 
+                                      values=["未完成", "已完成"], width=27)
+        completed_combo.grid(row=3, column=1, sticky=tk.W, pady=5, padx=5)
+        
+        # 设置默认值（编辑模式）
+        if task:
+            self.completed_var.set("已完成" if task.status == "已完成" else "未完成")
+        else:
+            self.completed_var.set("未完成")
+
+        # 预期完成时间
+        ttk.Label(frame, text="预期完成时间:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        self.due_date_var = tk.StringVar(value=task.due_date if task and task.due_date else "")
+        due_date_entry = DateEntry(frame, textvariable=self.due_date_var, 
+                                 width=20, date_pattern='yyyy-mm-dd', locale='zh_CN')
+        due_date_entry.grid(row=4, column=1, sticky=tk.W, pady=5, padx=5)
+
+        # 按钮框架
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        
+        ttk.Button(button_frame, text="确定", command=self.on_ok).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="取消", command=self.on_cancel).pack(side=tk.LEFT, padx=10)
+
+        # 配置网格权重
+        frame.columnconfigure(1, weight=1)
+
+    def on_ok(self):
+        """确定按钮点击事件"""
+        title = self.title_var.get().strip()
+        
+        if not title:
+            messagebox.showwarning("警告", "任务名称不能为空")
+            return
+
+        # 验证日期格式
+        due_date = self.due_date_var.get().strip()
+        if due_date:
+            try:
+                datetime.strptime(due_date, "%Y-%m-%d")
+            except ValueError:
+                messagebox.showwarning("警告", "预期完成时间格式错误，请使用 YYYY-MM-DD 格式")
+                return
+
+        self.result = (
+            title,
+            self.project_var.get(),
+            self.priority_var.get(),
+            self.completed_var.get(),
+            due_date if due_date else None
+        )
+        self.dialog.destroy()
+
+    def on_cancel(self):
         """取消按钮点击事件"""
         self.dialog.destroy()
