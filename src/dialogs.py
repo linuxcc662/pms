@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 import tkinter as tk
 from typing import Optional, Tuple
+from project_manager import ProjectManager
 
 # UI配置常量
 UI_CONFIG = {
@@ -200,7 +201,7 @@ class TaskDialog:
 class WeeklyTaskDialog:
     """每周任务对话框类，用于创建和编辑每周待办事项"""
 
-    def __init__(self, parent, title, task=None):
+    def __init__(self, parent, title, task=None, project_names = None):
         """
         初始化每周任务对话框
         
@@ -208,17 +209,18 @@ class WeeklyTaskDialog:
             parent: 父窗口
             title: 对话框标题
             task: 可选的任务对象，用于编辑模式
+            project_name: 可选的项目名称，用于创建模式
         """
         self.result = None
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(title)
-        self.dialog.geometry("400x300")
+        self.dialog.geometry("400x350")  # 增加对话框高度以容纳描述字段
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
         # 居中显示
         self.center_dialog(parent)
-        self.create_widgets(task)
+        self.create_widgets(task, project_names)
         self.dialog.wait_window()
 
     def center_dialog(self, parent):
@@ -228,7 +230,7 @@ class WeeklyTaskDialog:
         y = parent.winfo_y() + (parent.winfo_height() - self.dialog.winfo_height()) // 2
         self.dialog.geometry(f"+{x}+{y}")
 
-    def create_widgets(self, task=None):
+    def create_widgets(self, task=None, project_names=None):
         """创建对话框中的所有控件"""
         frame = ttk.Frame(self.dialog, padding="10")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -239,23 +241,41 @@ class WeeklyTaskDialog:
         title_entry = ttk.Entry(frame, textvariable=self.title_var, width=30)
         title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
 
-        # 所属项目 - 修改为从项目名称筛选
-        ttk.Label(frame, text="所属项目:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        # 任务描述 - 新增字段
+        ttk.Label(frame, text="任务描述:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.desc_text = tk.Text(frame, height=3, width=30)
+        self.desc_text.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
+        
+        # 设置默认值（编辑模式）
+        if task and task.description:
+            self.desc_text.insert("1.0", task.description)
+
+        # 所属项目
+        ttk.Label(frame, text="所属项目:").grid(row=2, column=0, sticky=tk.W, pady=5)
         self.project_var = tk.StringVar()
         
-        # 获取所有项目名称（从任务标题中提取）
-        from project_manager import ProjectManager
-        manager = ProjectManager()
-        tasks = manager.get_all_tasks()
+        # 使用传入的项目名称列表，避免从project_manager加载
+        if project_names is None:
+            from project_manager import ProjectManager
+            manager = ProjectManager()
+            projects = manager.get_all_projects()
+            project_names = sorted(set(project.title for project in projects if project.title))
         
-        # 提取项目名称：假设项目名称是任务标题中特定的格式
-        # 这里可以根据实际需求调整项目名称的提取逻辑
-        project_names = sorted(set(task.title for task in tasks if task.title))
         project_options = ["无"] + project_names
         
         project_combo = ttk.Combobox(frame, textvariable=self.project_var, 
                                    values=project_options, width=27)
-        project_combo.grid(row=1, column=1, sticky=tk.W, pady=5, padx=5)
+        project_combo.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
+
+        # 删除以下重复代码（第268-274行）
+        # 提取项目名称：假设项目名称是任务标题中特定的格式
+        # 这里可以根据实际需求调整项目名称的提取逻辑
+        # project_names = sorted(set(project.title for project in projects if project.title))
+        # project_options = ["无"] + project_names
+        # 
+        # project_combo = ttk.Combobox(frame, textvariable=self.project_var, 
+        #                            values=project_options, width=27)
+        # project_combo.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
         
         # 设置默认值（编辑模式）
         if task:
@@ -264,11 +284,11 @@ class WeeklyTaskDialog:
             self.project_var.set("无")
 
         # 紧急程度
-        ttk.Label(frame, text="紧急程度:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text="紧急程度:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.priority_var = tk.StringVar()
         priority_combo = ttk.Combobox(frame, textvariable=self.priority_var, 
                                     values=["一般", "重要", "核心"], width=27)
-        priority_combo.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
+        priority_combo.grid(row=3, column=1, sticky=tk.W, pady=5, padx=5)
         
         # 设置默认值（编辑模式）
         if task:
@@ -278,11 +298,11 @@ class WeeklyTaskDialog:
             self.priority_var.set("一般")
 
         # 是否完成
-        ttk.Label(frame, text="是否完成:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text="是否完成:").grid(row=4, column=0, sticky=tk.W, pady=5)
         self.completed_var = tk.StringVar()
         completed_combo = ttk.Combobox(frame, textvariable=self.completed_var, 
                                       values=["未完成", "已完成"], width=27)
-        completed_combo.grid(row=3, column=1, sticky=tk.W, pady=5, padx=5)
+        completed_combo.grid(row=4, column=1, sticky=tk.W, pady=5, padx=5)
         
         # 设置默认值（编辑模式）
         if task:
@@ -291,15 +311,15 @@ class WeeklyTaskDialog:
             self.completed_var.set("未完成")
 
         # 预期完成时间
-        ttk.Label(frame, text="预期完成时间:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        ttk.Label(frame, text="预期完成时间:").grid(row=5, column=0, sticky=tk.W, pady=5)
         self.due_date_var = tk.StringVar(value=task.due_date if task and task.due_date else "")
         due_date_entry = DateEntry(frame, textvariable=self.due_date_var, 
                                  width=20, date_pattern='yyyy-mm-dd', locale='zh_CN')
-        due_date_entry.grid(row=4, column=1, sticky=tk.W, pady=5, padx=5)
+        due_date_entry.grid(row=5, column=1, sticky=tk.W, pady=5, padx=5)
 
         # 按钮框架
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
         
         ttk.Button(button_frame, text="确定", command=self.on_ok).pack(side=tk.LEFT, padx=10)
         ttk.Button(button_frame, text="取消", command=self.on_cancel).pack(side=tk.LEFT, padx=10)
@@ -324,8 +344,12 @@ class WeeklyTaskDialog:
                 messagebox.showwarning("警告", "预期完成时间格式错误，请使用 YYYY-MM-DD 格式")
                 return
 
+        # 获取任务描述
+        description = self.desc_text.get("1.0", tk.END).strip()
+
         self.result = (
             title,
+            description,  # 新增描述字段
             self.project_var.get(),
             self.priority_var.get(),
             self.completed_var.get(),

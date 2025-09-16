@@ -103,3 +103,19 @@ class ProjectManager:
         else:
             logger.warning(f"未找到项目编号为 {project_number} 的项目")
             return False
+    
+    def add_task(self, title: str, description: str = "", priority: int = 1,
+                 due_date: Optional[str] = None, start_date: Optional[str] = None,
+                 project_number: Optional[str] = None) -> Task:
+        """添加新任务"""
+        task = Task(
+            title=title,
+            description=description,
+            priority=priority,
+            due_date=due_date,
+            start_date=start_date,
+            project_number=project_number
+        )
+        self.tasks.append(task)
+        self.save_tasks()
+        return task

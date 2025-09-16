@@ -23,7 +23,7 @@ def main():
     # os.chdir(script_dir)
     
     # root.tk.call("source", "themes/dark.tcl")
-    # root.tk.call("set_theme", "light")
+    # root.tk.call("set_theme", "light")ERROR:weekly_task_manager:添加每周待办事项失败: name 'project_name' is not defined
     # sv_ttk.set_theme("light")
     # sv_ttk.set_theme("dark")
     app = ProjectManagerGUI(root)
