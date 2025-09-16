@@ -160,7 +160,7 @@ class ProjectManager:
         return task
 
     def remove_task(self, task_index: int) -> bool:
-        """删除任务"""
+        """删除项目"""
         if 0 <= task_index < len(self.tasks):
             del self.tasks[task_index]
             self.save_tasks()
@@ -209,8 +209,13 @@ class ProjectManager:
             try:
                 with open(self.data_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    print(f"Loaded data: {data}")  # 调试信息
                     self.tasks = [Task.from_dict(item) for item in data]
-            except (FileNotFoundError, json.JSONDecodeError):
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                print(f"Error loading tasks: {e}")  # 调试信息
+                self.tasks = []
+            except Exception as e:
+                print(f"Unexpected error: {e}")  # 调试信息
                 self.tasks = []
         else:
             self.tasks = []
@@ -368,7 +373,7 @@ class ProjectManagerGUI:
             weekly_frame, columns=weekly_columns, show="headings", height=15)
 
         # 设置列标题
-        self.weekly_tree.heading("title", text="任务名称")
+        self.weekly_tree.heading("title", text="项目名称")
         self.weekly_tree.heading("priority", text="优先级")
         self.weekly_tree.heading("status", text="状态")
         self.weekly_tree.heading("progress", text="进度")
@@ -443,7 +448,7 @@ class ProjectManagerGUI:
 
         # 设置列标题
         self.tree.heading("project_number", text="项目编号")
-        self.tree.heading("title", text="任务名称")
+        self.tree.heading("title", text="项目名称")
         self.tree.heading("progress", text="进度")
         self.tree.heading("status", text="状态")
         self.tree.heading("priority", text="优先级")
@@ -476,7 +481,7 @@ class ProjectManagerGUI:
                    style='Success.TButton').pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="编辑任务", command=self.edit_task,
                    style='Primary.TButton').pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="删除任务", command=self.delete_task,
+        ttk.Button(button_frame, text="删除项目", command=self.delete_task,
                    style='Danger.TButton').pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="更新进度", command=self.update_progress,
                    style='Warning.TButton').pack(side=tk.LEFT, padx=5)
@@ -627,7 +632,7 @@ class ProjectManagerGUI:
                 messagebox.showinfo("成功", "任务更新成功!")
 
     def delete_task(self):
-        """删除任务"""
+        """删除项目"""
         selected = self.tree.selection()
         if not selected:
             messagebox.showwarning("警告", "请先选择一个任务")
@@ -640,7 +645,7 @@ class ProjectManagerGUI:
                 self.refresh_task_list()
                 messagebox.showinfo("成功", "任务删除成功!")
             else:
-                messagebox.showerror("错误", "删除任务失败")
+                messagebox.showerror("错误", "删除项目失败")
 
     def update_progress(self):
         """更新任务进度"""
@@ -701,7 +706,7 @@ class TaskDialog:
             row=0, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
 
         # 标题
-        ttk.Label(frame, text="任务名称:").grid(
+        ttk.Label(frame, text="项目名称:").grid(
             row=1, column=0, sticky=tk.W, pady=5)
         self.title_var = tk.StringVar(value=task.title if task else "")
         title_entry = ttk.Entry(frame, textvariable=self.title_var, width=40)
@@ -753,7 +758,7 @@ class TaskDialog:
             side=tk.LEFT, padx=10)
 
         # 配置网格权重
-        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(1, weight=0)
 
     def on_ok(self):
         """确定按钮点击事件"""
@@ -795,7 +800,7 @@ class TaskDialog:
 def main():
     """主函数"""
     root = tk.Tk()
-    setup_styles()  # 应用样式
+    # setup_styles()  # 应用样式
     app = ProjectManagerGUI(root)
     root.mainloop()
 

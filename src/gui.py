@@ -54,11 +54,12 @@ class WeeklyTasksGUI:
         week_options = self.generate_week_options()
         current_week = datetime.now().isocalendar()[1]
         current_monday, current_sunday = self.get_week_dates(current_week)
-        
-        self.week_var = tk.StringVar(value=f"第{current_week}周 ({current_monday}-{current_sunday})")
-        
-        week_combo = ttk.Combobox(week_frame, textvariable=self.week_var, 
-                                 values=week_options, width=20, state="readonly")
+
+        self.week_var = tk.StringVar(
+            value=f"第{current_week}周 ({current_monday}-{current_sunday})")
+
+        week_combo = ttk.Combobox(week_frame, textvariable=self.week_var,
+                                  values=week_options, width=20, state="readonly")
         week_combo.pack(side=tk.LEFT)
         week_combo.bind("<<ComboboxSelected>>", self.refresh_weekly_tasks)
 
@@ -85,26 +86,28 @@ class WeeklyTasksGUI:
         """设置操作按钮"""
         button_frame = ttk.Frame(parent_frame)
         button_frame.pack(side=tk.RIGHT, padx=(10, 0))
-        
+
         buttons = [
             ("新增任务", self.add_weekly_task, 'Success.TButton'),
             ("编辑任务", self.edit_weekly_task, 'Primary.TButton'),
             ("删除任务", self.delete_weekly_task, 'Danger.TButton'),
             ("刷新", self.refresh_weekly_tasks, 'Primary.TButton')
         ]
-        
+
         for text, command, style in buttons:
-            ttk.Button(button_frame, text=text, command=command, style=style).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text=text, command=command,
+                       style=style).pack(side=tk.LEFT, padx=5)
 
     def setup_task_tree(self):
         """设置任务树形列表"""
         weekly_frame = ttk.Frame(self.parent)
         weekly_frame.pack(fill=tk.BOTH, expand=True)
 
-        weekly_columns = ("title", "project", "priority", "completed", "due_date")
-        self.weekly_tree = ttk.Treeview(weekly_frame, columns=weekly_columns, 
-                                       show="headings", height=15)
-        
+        weekly_columns = ("title", "project", "priority",
+                          "completed", "due_date")
+        self.weekly_tree = ttk.Treeview(weekly_frame, columns=weekly_columns,
+                                        show="headings", height=15)
+
         # 设置列标题和宽度
         columns_config = [
             ("title", "任务名称", 150),
@@ -113,14 +116,14 @@ class WeeklyTasksGUI:
             ("completed", "是否完成", 80),
             ("due_date", "预期完成时间", 120)
         ]
-        
+
         for col_id, heading, width in columns_config:
             self.weekly_tree.heading(col_id, text=heading)
             self.weekly_tree.column(col_id, width=width, anchor='center')
 
         # 添加滚动条
-        weekly_scrollbar = ttk.Scrollbar(weekly_frame, orient=tk.VERTICAL, 
-                                       command=self.weekly_tree.yview)
+        weekly_scrollbar = ttk.Scrollbar(weekly_frame, orient=tk.VERTICAL,
+                                         command=self.weekly_tree.yview)
         self.weekly_tree.configure(yscrollcommand=weekly_scrollbar.set)
 
         self.weekly_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -136,6 +139,9 @@ class WeeklyTasksGUI:
 
         self.completed_label = ttk.Label(stats_frame, text="已完成: 0")
         self.completed_label.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.pending_label = ttk.Label(stats_frame, text="未完成: 0")  # 新增这行
+        self.pending_label.pack(side=tk.LEFT, padx=(0, 10))  # 新增这行
 
         self.progress_label = ttk.Label(stats_frame, text="平均进度: 0%")
         self.progress_label.pack(side=tk.LEFT)
@@ -156,11 +162,12 @@ class WeeklyTasksGUI:
         """获取指定周的所有任务"""
         tasks = self.weekly_task_manager.get_all_weekly_tasks()
         weekly_tasks = []
-        
+
         for task in tasks:
             if task.start_date:
                 try:
-                    task_week = datetime.strptime(task.start_date, "%Y-%m-%d").isocalendar()[1]
+                    task_week = datetime.strptime(
+                        task.start_date, "%Y-%m-%d").isocalendar()[1]
                     if task_week == week_number:
                         weekly_tasks.append(task)
                 except ValueError:
@@ -171,7 +178,7 @@ class WeeklyTasksGUI:
         """将优先级字符串转换为数值"""
         priority_map = {
             "一般": 1,
-            "重要": 2, 
+            "重要": 2,
             "核心": 3
         }
         return priority_map.get(priority_str, 1)  # 默认返回1（一般）
@@ -181,12 +188,12 @@ class WeeklyTasksGUI:
         current_year = datetime.now().year
         jan_first = datetime(current_year, 1, 1)
         first_weekday = jan_first.weekday()
-        
+
         if first_weekday <= 3:
             first_monday = jan_first - timedelta(days=first_weekday)
         else:
             first_monday = jan_first + timedelta(days=(7 - first_weekday))
-        
+
         return first_monday
 
     def calculate_week_start_date(self, week_number):
@@ -199,7 +206,7 @@ class WeeklyTasksGUI:
         first_monday = self._get_week_dates_helper(week_number)
         target_monday = first_monday + timedelta(weeks=week_number - 1)
         target_sunday = target_monday + timedelta(days=6)
-        
+
         return target_monday.strftime("%m/%d"), target_sunday.strftime("%m/%d")
 
     def add_weekly_task(self):
@@ -207,18 +214,20 @@ class WeeklyTasksGUI:
         from project_manager import ProjectManager
         project_manager = ProjectManager()
         projects = project_manager.get_all_projects()
-        project_names = [project.title for project in projects if project.title]
-        
-        dialog = WeeklyTaskDialog(self.parent, "添加每周任务", project_names=project_names)
+        project_names = [
+            project.title for project in projects if project.title]
+
+        dialog = WeeklyTaskDialog(
+            self.parent, "添加每周任务", project_names=project_names)
         if dialog.result:
             title, description, project, priority_str, completed, due_date = dialog.result
-            
+
             week_number = self.get_selected_week_number()
             start_date = self.calculate_week_start_date(week_number)
-            
+
             # 转换优先级和状态
             priority_num = self.convert_priority(priority_str)
-            
+
             self.weekly_task_manager.add_weekly_task(
                 title=title,
                 description=description,
@@ -227,7 +236,7 @@ class WeeklyTasksGUI:
                 start_date=start_date,
                 project_name=project if project != "无" else None
             )
-            
+
             self.refresh_weekly_tasks()
             messagebox.showinfo("成功", "每周任务添加成功!")
 
@@ -237,116 +246,135 @@ class WeeklyTasksGUI:
             # 清空现有数据
             for item in self.weekly_tree.get_children():
                 self.weekly_tree.delete(item)
-        
+
             week_number = self.get_selected_week_number()
             weekly_tasks = self.weekly_task_manager.get_all_weekly_tasks()
-            
+
             # 显示任务
             for task in weekly_tasks:
                 try:
-                    # 修复：WeeklyTask.is_completed 是布尔值，不是字符串
-                    completed_status = "是" if task.is_completed else "否"
+                    # 优化：使用更明确的状态显示
+                    completed_status = "已完成" if task.is_completed else "未完成"
                     self.weekly_tree.insert("", "end", values=(
-                        task.title, 
-                        task.project_name or "无", 
-                        task.priority, 
-                        completed_status,
+                        task.title,
+                        task.project_name or "无",
+                        task.priority,
+                        completed_status,  # 使用明确的状态
                         task.due_date or "无"
                     ))
                 except Exception as e:
                     logger.error(f"显示任务时出错: {e}")
                     continue
-            
+
             # 更新统计信息
             self.update_statistics(weekly_tasks)
-            
+
         except Exception as e:
             logger.error(f"刷新任务列表时出错: {e}")
             messagebox.showerror("错误", "刷新任务列表失败")
 
-    def update_statistics(self, tasks):
-        """更新统计信息"""
-        total_tasks = len(tasks)
-        completed_tasks = sum(1 for t in tasks if t.is_completed)
-        # 移除progress相关的计算，因为WeeklyTask没有progress属性
-        avg_progress = 100 if completed_tasks == total_tasks and total_tasks > 0 else 0
-    
-        self.total_label.config(text=f"总任务: {total_tasks}")
-        self.completed_label.config(text=f"已完成: {completed_tasks}")
-        self.progress_label.config(text=f"完成率: {avg_progress:.1f}%")
-
-    def edit_weekly_task(self):
-        """编辑每周任务"""
-        selected = self.weekly_tree.selection()
-        if not selected:
-            messagebox.showwarning("警告", "请先选择一个任务")
-            return
-    
-        # 获取选中的任务信息
-        item = self.weekly_tree.item(selected[0])
-        values = item['values']
-        
-        week_number = self.get_selected_week_number()
-        weekly_tasks = self.get_weekly_tasks(week_number)
-        
-        # 查找对应的任务对象
-        task_to_edit = self.find_matching_task(weekly_tasks, values)
-        
-        if task_to_edit:
-            dialog = WeeklyTaskDialog(self.parent, "编辑每周任务", task_to_edit)
-            if dialog.result:
-                title, description, project, priority, completed, due_date = dialog.result
-                
-                # 更新任务信息
-                self.update_task_info(task_to_edit, title, description, project, priority, completed, due_date)
-                
-                self.weekly_task_manager.save_tasks()
-                self.refresh_weekly_tasks()
-                messagebox.showinfo("成功", "任务更新成功!")
-
     def find_matching_task(self, tasks, values):
         """查找匹配的任务对象"""
         for task in tasks:
-            if (task.title == values[0] and 
-                (task.project_name or "无") == values[1] and 
-                str(task.priority) == values[2] and 
-                # 修复：与显示的状态保持一致
-                ("是" if task.is_completed else "否") == values[3] and 
-                (task.due_date or "无") == values[4]):
+            # 修复：1) 将标题转换为字符串进行比较，避免数字类型问题
+            #       2) 优先级比较时不进行类型转换
+            #       3) 同时检查project_name和project_number以提高匹配成功率
+            if (str(task.title) == str(values[0]) and
+                ((task.project_name or "无") == values[1] or 
+                 (hasattr(task, 'project_number') and (task.project_number or "无") == values[1])) and
+                task.priority == values[2] and
+                ("已完成" if task.is_completed else "未完成") == values[3] and
+                    (task.due_date or "无") == values[4]):
                 return task
         return None
 
     def update_task_info(self, task, title, description, project, priority, completed, due_date):
         """更新任务信息"""
         priority_num = self.convert_priority(priority)
-        task.is_completed = (completed == "已完成")
-        
+        # 修复：正确处理状态转换
+        is_completed = completed == "已完成"
+
         task.title = title
         task.description = description
         task.project_name = project if project != "无" else None
         task.priority = priority_num
-        # 删除这行冗余代码：task.is_completed = task.is_completed
+        task.is_completed = is_completed  # 直接设置布尔值
         task.due_date = due_date
         task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    def update_statistics(self, tasks):
+        """更新统计信息"""
+        total_tasks = len(tasks)
+        completed_tasks = sum(1 for t in tasks if t.is_completed)
+        pending_tasks = total_tasks - completed_tasks
+        completion_rate = (completed_tasks / total_tasks *
+                           100) if total_tasks > 0 else 0
+
+        self.total_label.config(text=f"总任务: {total_tasks}")
+        self.completed_label.config(text=f"已完成: {completed_tasks}")
+        self.pending_label.config(text=f"未完成: {pending_tasks}")  # 新增未完成统计
+        self.progress_label.config(text=f"完成率: {completion_rate:.1f}%")
+
+    def edit_weekly_task(self):
+        """编辑每周任务"""
+        try:
+            selected = self.weekly_tree.selection()
+            if not selected:
+                messagebox.showwarning("警告", "请先选择一个任务")
+                return
+
+            # 获取选中的任务信息
+            item = self.weekly_tree.item(selected[0])
+            values = item['values']
+
+            week_number = self.get_selected_week_number()
+            weekly_tasks = self.get_weekly_tasks(week_number)
+
+            # 查找对应的任务对象
+            task_to_edit = self.find_matching_task(weekly_tasks, values)
+
+            if not task_to_edit:
+                messagebox.showwarning("警告", "无法找到匹配的任务")
+                return
+
+            dialog = WeeklyTaskDialog(self.parent, "编辑每周任务", task_to_edit)
+            if dialog.result:
+                title, description, project, priority, completed, due_date = dialog.result
+
+                # 更新任务信息
+                self.update_task_info(
+                    task_to_edit, title, description, project, priority, completed, due_date)
+
+                # 修复：将不存在的save_tasks()改为正确的save_data()
+                self.weekly_task_manager.save_data()
+                self.refresh_weekly_tasks()
+                messagebox.showinfo("成功", "任务更新成功!")
+        except Exception as e:
+            logger.error(f"编辑任务时出错: {e}")
+            messagebox.showerror("错误", f"编辑任务失败: {str(e)}")
+
     def delete_weekly_task(self):
         """删除每周任务"""
-        selected = self.weekly_tree.selection()
-        if not selected:
-            messagebox.showwarning("警告", "请先选择一个任务")
-            return
+        try:
+            selected = self.weekly_tree.selection()
+            if not selected:
+                messagebox.showwarning("警告", "请先选择一个任务")
+                return
 
         # 获取选中的任务信息
-        item = self.weekly_tree.item(selected[0])
-        values = item['values']
-        
-        week_number = self.get_selected_week_number()
-        weekly_tasks = self.get_weekly_tasks(week_number)
-        
-        # 查找对应的任务对象
-        task_to_delete = self.find_matching_task(weekly_tasks, values)
-        
-        if task_to_delete:
+            item = self.weekly_tree.item(selected[0])
+            values = item['values']
+
+            week_number = self.get_selected_week_number()
+            weekly_tasks = self.get_weekly_tasks(week_number)
+
+            # 查找对应的任务对象
+            task_to_delete = self.find_matching_task(weekly_tasks, values)
+
+            if not task_to_delete:
+                messagebox.showwarning("警告", "无法找到匹配的任务")
+                return
+
             if messagebox.askyesno("确认", "确定要删除这个任务吗？"):
                 # 从管理器中删除任务
                 all_tasks = self.weekly_task_manager.get_all_weekly_tasks()
@@ -358,6 +386,9 @@ class WeeklyTasksGUI:
                         else:
                             messagebox.showerror("错误", "删除任务失败")
                         break
+        except Exception as e:
+            logger.error(f"删除任务时出错: {e}")
+            messagebox.showerror("错误", f"删除任务失败: {str(e)}")
 
 
 class ProjectTasksGUI:
@@ -393,18 +424,21 @@ class ProjectTasksGUI:
         ttk.Label(filter_frame, text="项目编号筛选:").pack(side=tk.LEFT, padx=5)
         self.project_number_var = tk.StringVar()
         self.project_number_combo = ttk.Combobox(filter_frame, textvariable=self.project_number_var,
-                                         values=["所有"] + sorted(set(project.project_number for project in self.manager.get_all_projects() if project.project_number)))
+                                                 values=["所有"] + sorted(set(project.project_number for project in self.manager.get_all_projects() if project.project_number)))
         self.project_number_combo.set("所有")
         self.project_number_combo.pack(side=tk.LEFT, padx=5)
-        self.project_number_combo.bind("<<ComboboxSelected>>", self.filter_tasks)
+        self.project_number_combo.bind(
+            "<<ComboboxSelected>>", self.filter_tasks)
 
         # 任务列表容器框架
         tree_container = ttk.Frame(self.parent)
         tree_container.pack(fill=tk.BOTH, expand=True)
 
         # 任务列表
-        columns = ("project_number", "title", "progress", "status", "priority", "start_date", "due_date")
-        self.tree = ttk.Treeview(tree_container, columns=columns, show="headings", height=15)
+        columns = ("project_number", "title", "progress",
+                   "status", "priority", "start_date", "due_date")
+        self.tree = ttk.Treeview(
+            tree_container, columns=columns, show="headings", height=15)
 
         self.tree.heading("project_number", text="项目编号")
         self.tree.heading("title", text="项目名称")
@@ -422,7 +456,8 @@ class ProjectTasksGUI:
         self.tree.column("start_date", width=100, anchor='center')
         self.tree.column("due_date", width=100, anchor='center')
 
-        scrollbar = ttk.Scrollbar(tree_container, orient=tk.VERTICAL, command=self.tree.yview)
+        scrollbar = ttk.Scrollbar(
+            tree_container, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
 
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -480,7 +515,8 @@ class ProjectTasksGUI:
             tasks = [t for t in tasks if t.priority == int(priority_filter)]
 
         if project_number_filter != "所有":
-            tasks = [t for t in tasks if t.project_number == project_number_filter]
+            tasks = [t for t in tasks if t.project_number ==
+                     project_number_filter]
 
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -501,7 +537,8 @@ class ProjectTasksGUI:
         dialog = TaskDialog(self.parent, "添加项目")
         if dialog.result:
             title, description, priority, due_date, start_date, project_number = dialog.result
-            self.manager.add_project(title, description, priority, due_date, start_date, project_number)
+            self.manager.add_project(
+                title, description, priority, due_date, start_date, project_number)
             self.refresh_task_list()
             messagebox.showinfo("成功", "项目添加成功!")
 
@@ -511,19 +548,19 @@ class ProjectTasksGUI:
         if not selected:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
-    
+
         item = self.tree.item(selected[0])
         project_number = item['values'][0]
-    
+
         # 确保项目编号是字符串类型
         if project_number != "无":  # 处理"无"的情况
             project_number = str(project_number)  # 确保转换为字符串
         else:
             messagebox.showwarning("警告", "无法编辑没有项目编号的任务")
             return
-    
+
         task = self.manager.get_project_by_number(project_number)
-    
+
         if task:
             dialog = TaskDialog(self.parent, "编辑项目", task)
             if dialog.result:
@@ -545,24 +582,24 @@ class ProjectTasksGUI:
         if not selected:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
-    
+
         item = self.tree.item(selected[0])
         project_number = item['values'][0]
-    
+
         # 确保项目编号是字符串类型
         if project_number != "无":  # 处理"无"的情况
             project_number = str(project_number)  # 确保转换为字符串
         else:
             messagebox.showwarning("警告", "无法更新没有项目编号的任务进度")
             return
-    
+
         task = self.manager.get_project_by_number(project_number)
-    
+
         if task:
-            new_progress = simpledialog.askinteger("更新进度", 
-                                                 f"请输入新的进度 (0-100):",
-                                                 initialvalue=task.progress,
-                                                 minvalue=0, maxvalue=100)
+            new_progress = simpledialog.askinteger("更新进度",
+                                                   f"请输入新的进度 (0-100):",
+                                                   initialvalue=task.progress,
+                                                   minvalue=0, maxvalue=100)
             if new_progress is not None:
                 task.progress = new_progress
                 if new_progress == 100:
@@ -582,23 +619,24 @@ class ProjectTasksGUI:
         if not selected:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
-    
+
         item = self.tree.item(selected[0])
         project_number = item['values'][0]
-        
+
         # 确保项目编号是字符串类型
         if project_number != "无":  # 处理"无"的情况
             project_number = str(project_number)  # 确保转换为字符串
         else:
             messagebox.showwarning("警告", "无法删除没有项目编号的任务")
             return
-    
+
         if messagebox.askyesno("确认", "确定要删除这个项目吗？"):
             if self.manager.delete_project(project_number):
                 self.refresh_task_list()
                 messagebox.showinfo("成功", "项目删除成功!")
             else:
                 messagebox.showerror("错误", "删除项目失败")
+
 
 class ProjectManagerGUI:
     """项目进度管理图形界面（主控制器）"""
@@ -616,7 +654,7 @@ class ProjectManagerGUI:
         self.current_view = "split"
         # 视图字典
         self.views = {}
-        
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -626,13 +664,12 @@ class ProjectManagerGUI:
         nav_frame.pack(fill=tk.X, pady=(10, 0))
 
         self.weekly_btn = ttk.Button(nav_frame, text="每周待办事项",
-                                    command=self.show_weekly_view,
-                                    style='Nav.TButton')
-        self.weekly_btn.pack(side=tk.LEFT, padx=5)
-
-        self.project_btn = ttk.Button(nav_frame, text="项目信息",
-                                     command=self.show_project_view,
+                                     command=self.show_weekly_view,
                                      style='Nav.TButton')
+        self.weekly_btn.pack(side=tk.LEFT, padx=5)
+        self.project_btn = ttk.Button(nav_frame, text="项目信息",
+                                      command=self.show_project_view,
+                                      style='Nav.TButton')
         self.project_btn.pack(side=tk.LEFT, padx=5)
 
         self.select_button(self.weekly_btn)
@@ -655,7 +692,8 @@ class ProjectManagerGUI:
         """创建所有视图框架"""
         # 每周待办事项视图
         weekly_frame = ttk.Frame(self.main_container, padding="10")
-        self.weekly_gui = WeeklyTasksGUI(weekly_frame, self.weekly_task_manager)
+        self.weekly_gui = WeeklyTasksGUI(
+            weekly_frame, self.weekly_task_manager)
         self.views["weekly"] = weekly_frame
 
         # 项目信息视图
@@ -694,8 +732,8 @@ def setup_weekly_tasks_ui(self, parent):
     """设置每周待办事项界面"""
     # 创建WeeklyTaskManager实例
     weekly_task_manager = WeeklyTaskManager()
-    
+
     # 创建WeeklyTasksGUI实例，传递正确的manager
     self.weekly_tasks_gui = WeeklyTasksGUI(parent, weekly_task_manager)
-    
+
     # 移除原有的UI设置代码，因为WeeklyTasksGUI会自己设置UI

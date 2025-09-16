@@ -94,6 +94,18 @@ class WeeklyTaskManager:
         """获取所有每周待办事项"""
         return self.weekly_tasks.copy()
 
+    def remove_task(self, index: int) -> bool:
+        """删除指定索引的待办事项"""
+        try:
+            if 0 <= index < len(self.weekly_tasks):
+                self.weekly_tasks.pop(index)
+                return self.save_data()
+            logger.warning(f"删除任务失败：索引 {index} 超出范围")
+            return False
+        except Exception as e:
+            logger.error(f"删除任务时发生错误: {e}")
+            return False
+
     # def get_tasks_by_week(self, week_number: int, year: Optional[int] = None) -> List[Task]:
     #     """获取指定周数的任务"""
     #     if year is None:

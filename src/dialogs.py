@@ -279,7 +279,7 @@ class WeeklyTaskDialog:
         
         # 设置默认值（编辑模式）
         if task:
-            self.project_var.set(task.project_number or "无")
+            self.project_var.set(task.project_name or "无")
         else:
             self.project_var.set("无")
 
