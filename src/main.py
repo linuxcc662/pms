@@ -7,7 +7,6 @@ from typing import List, Dict, Optional
 import tkinter as tk
 from gui import ProjectManagerGUI
 from styles import setup_styles
-import sv_ttk
 
 def main():
     """
@@ -16,16 +15,7 @@ def main():
     初始化Tkinter主窗口并启动应用程序
     """
     root = tk.Tk()
-    # setup_styles()
-    
-    # # Change to the directory containing azure.tcl
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # os.chdir(script_dir)
-    
-    # root.tk.call("source", "themes/dark.tcl")
-    # root.tk.call("set_theme", "light")
-    # sv_ttk.set_theme("light")
-    # sv_ttk.set_theme("dark")
+    setup_styles()
     app = ProjectManagerGUI(root)
     root.mainloop()
 

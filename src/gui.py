@@ -255,10 +255,12 @@ class WeeklyTasksGUI:
                 try:
                     # 优化：使用更明确的状态显示
                     completed_status = "已完成" if task.is_completed else "未完成"
+                    # 将优先级数值转换为星号显示
+                    priority_stars = "★" * min(task.priority, 3) if task.priority else ""
                     self.weekly_tree.insert("", "end", values=(
                         task.title,
                         task.project_name or "无",
-                        task.priority,
+                        priority_stars,
                         completed_status,  # 使用明确的状态
                         task.due_date or "无"
                     ))
@@ -276,16 +278,31 @@ class WeeklyTasksGUI:
     def find_matching_task(self, tasks, values):
         """查找匹配的任务对象"""
         for task in tasks:
-            # 修复：1) 将标题转换为字符串进行比较，避免数字类型问题
-            #       2) 优先级比较时不进行类型转换
-            #       3) 同时检查project_name和project_number以提高匹配成功率
-            if (str(task.title) == str(values[0]) and
-                ((task.project_name or "无") == values[1] or 
-                 (hasattr(task, 'project_number') and (task.project_number or "无") == values[1])) and
-                task.priority == values[2] and
-                ("已完成" if task.is_completed else "未完成") == values[3] and
-                    (task.due_date or "无") == values[4]):
-                return task
+            try:
+                # 修复：将星号字符串转换回相应的数值，以正确比较优先级
+                priority_value = values[2]
+                # 如果是星号格式，转换为对应的数字
+                if isinstance(priority_value, str) and priority_value.startswith("★"):
+                    priority_num = len(priority_value)
+                else:
+                    # 保持原有逻辑，处理可能的数字值
+                    try:
+                        priority_num = int(priority_value)
+                    except ValueError:
+                        priority_num = 0
+
+                # 修改比较逻辑，使用转换后的优先级数值
+                if (str(task.title) == str(values[0]) and
+                    ((task.project_name or "无") == values[1] or 
+                     (hasattr(task, 'project_number') and (task.project_number or "无") == values[1])) and
+                    task.priority == priority_num and  # 使用转换后的数值进行比较
+                    ("已完成" if task.is_completed else "未完成") == values[3] and
+                        (task.due_date or "无") == values[4]):
+                    return task
+            except Exception as e:
+                # 处理可能的类型转换错误，继续尝试下一个任务
+                logger.error(f"匹配任务时出错: {e}")
+                continue
         return None
 
     def update_task_info(self, task, title, description, project, priority, completed, due_date):

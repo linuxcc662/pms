@@ -135,6 +135,15 @@ class TaskDialog:
                              width=UI_CONFIG['date_entry_width'],
                              date_pattern='yyyy-mm-dd', locale='zh_CN',
                              maxdate=max_date)  # 添加最大日期限制
+        
+        # 修复：显式设置日期值，确保在编辑模式下显示任务的原始日期
+        if default_value:
+            try:
+                date_entry.set_date(datetime.strptime(default_value, "%Y-%m-%d"))
+            except ValueError:
+                # 如果日期格式不正确，保持默认值不变
+                pass
+        
         date_entry.grid(row=row, column=1, sticky=tk.W, pady=5, padx=5)
         
         # 添加焦点绑定以减少闪烁
@@ -315,6 +324,11 @@ class WeeklyTaskDialog:
         self.due_date_var = tk.StringVar(value=task.due_date if task and task.due_date else "")
         due_date_entry = DateEntry(frame, textvariable=self.due_date_var, 
                                  width=20, date_pattern='yyyy-mm-dd', locale='zh_CN')
+        
+        # 修复：显式设置日期值，确保在编辑模式下显示任务的原始截止日期
+        if task and task.due_date:
+            due_date_entry.set_date(datetime.strptime(task.due_date, "%Y-%m-%d"))
+            
         due_date_entry.grid(row=5, column=1, sticky=tk.W, pady=5, padx=5)
 
         # 按钮框架
