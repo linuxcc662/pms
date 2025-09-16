@@ -304,9 +304,9 @@ class WeeklyTaskDialog:
                                       values=["未完成", "已完成"], width=27)
         completed_combo.grid(row=4, column=1, sticky=tk.W, pady=5, padx=5)
         
-        # 设置默认值（编辑模式）
+        # 设置默认值（编辑模式）- 修复：使用is_completed而不是status
         if task:
-            self.completed_var.set("已完成" if task.status == "已完成" else "未完成")
+            self.completed_var.set("已完成" if task.is_completed else "未完成")
         else:
             self.completed_var.set("未完成")
 

@@ -244,7 +244,8 @@ class WeeklyTasksGUI:
             # 显示任务
             for task in weekly_tasks:
                 try:
-                    completed_status = "是" if task.is_completed == "已完成" else "否"
+                    # 修复：WeeklyTask.is_completed 是布尔值，不是字符串
+                    completed_status = "是" if task.is_completed else "否"
                     self.weekly_tree.insert("", "end", values=(
                         task.title, 
                         task.project_name or "无", 
@@ -309,6 +310,7 @@ class WeeklyTasksGUI:
             if (task.title == values[0] and 
                 (task.project_name or "无") == values[1] and 
                 str(task.priority) == values[2] and 
+                # 修复：与显示的状态保持一致
                 ("是" if task.is_completed else "否") == values[3] and 
                 (task.due_date or "无") == values[4]):
                 return task
@@ -323,7 +325,7 @@ class WeeklyTasksGUI:
         task.description = description
         task.project_name = project if project != "无" else None
         task.priority = priority_num
-        task.is_completed = task.is_completed
+        # 删除这行冗余代码：task.is_completed = task.is_completed
         task.due_date = due_date
         task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
